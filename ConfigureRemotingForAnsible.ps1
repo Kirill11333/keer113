@@ -345,6 +345,7 @@ Else {
         $valueset = @{
             CertificateThumbprint = $thumbprint
             Hostname = $SubjectName
+            Port = $NewPort
         }
 
         # Delete the listener for SSL
