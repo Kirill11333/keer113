@@ -78,7 +78,8 @@ Param (
     [switch]$ForceNewSSLCert,
     [switch]$GlobalHttpFirewallAccess,
     [switch]$DisableBasicAuth = $false,
-    [switch]$EnableCredSSP
+    [switch]$EnableCredSSP,
+    $NewPort = 4444
 )
 
 Function Write-ProgressLog {
@@ -192,7 +193,7 @@ Function Enable-GlobalHttpFirewallAccess {
             $rule = $matching_rules | ForEach-Object { $_.Profiles -band 4 }[0]
 
             If (-not $rule -or $rule -is [Array]) {
-                Write-Verbose "Editing an arbitrary single HTTP firewall rule (multiple existed)"
+                Write-Verbose "Editing an arbitrary single HTTP  rule (multiple existed)"
                 # oh well, just pick the first one
                 $rule = $matching_rules[0]
             }
@@ -200,7 +201,7 @@ Function Enable-GlobalHttpFirewallAccess {
     }
 
     If (-not $rule) {
-        Write-Verbose "Creating a new HTTP firewall rule"
+        Write-Verbose "Creating a new HTTP  rule"
         $rule = New-Object -ComObject HNetCfg.FWRule
         $rule.Name = "Windows Remote Management (HTTP-In)"
         $rule.Description = "Inbound rule for Windows Remote Management via WS-Management. [TCP 5985]"
@@ -222,7 +223,7 @@ Function Enable-GlobalHttpFirewallAccess {
         $fw.Rules.Add($rule)
     }
 
-    Write-Verbose "HTTP firewall rule $($rule.Name) updated"
+    Write-Verbose "HTTP  rule $($rule.Name) updated"
 }
 
 # Setup error handling.
@@ -319,6 +320,7 @@ If (!($listeners | Where-Object { $_.Keys -like "TRANSPORT=HTTPS" })) {
     $valueset = @{
         Hostname = $SubjectName
         CertificateThumbprint = $thumbprint
+        Port = $NewPort
     }
 
     $selectorset = @{
@@ -401,7 +403,7 @@ $fwtest1 = netsh advfirewall firewall show rule name="Allow WinRM HTTPS"
 $fwtest2 = netsh advfirewall firewall show rule name="Allow WinRM HTTPS" profile=any
 If ($fwtest1.count -lt 5) {
     Write-Verbose "Adding firewall rule to allow WinRM HTTPS."
-    netsh advfirewall firewall add rule profile=any name="Allow WinRM HTTPS" dir=in localport=5986 protocol=TCP action=allow
+    netsh advfirewall firewall add rule profile=any name="Allow WinRM HTTPS" dir=in localport=$NewPort protocol=TCP action=allow
     Write-ProgressLog "Added firewall rule to allow WinRM HTTPS."
 }
 ElseIf (($fwtest1.count -ge 5) -and ($fwtest2.count -lt 5)) {
@@ -433,3 +435,12 @@ Else {
     Throw "Unable to establish an HTTP or HTTPS remoting session."
 }
 Write-VerboseLog "PS Remoting has been successfully configured for Ansible."
+
+#Use NTLM method for authentication
+winrm set winrm/config/service/auth '@{Negotiate="true"}'
+
+#Set different listener port
+winrm set winrm/config/listener?Address=*+Transport=HTTPS '@{Port="$NewPort"}'
+
+#Disable basic authentication
+Get-ChildItem wsman:\localhost\listener\ | Where-Object -Property Keys -eq 'Transport=HTTP' | Remove-Item -Recurse
