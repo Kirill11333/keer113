@@ -193,7 +193,7 @@ Function Enable-GlobalHttpFirewallAccess {
             $rule = $matching_rules | ForEach-Object { $_.Profiles -band 4 }[0]
 
             If (-not $rule -or $rule -is [Array]) {
-                Write-Verbose "Editing an arbitrary single HTTP  rule (multiple existed)"
+                Write-Verbose "Editing an arbitrary single HTTP firewall  rule (multiple existed)"
                 # oh well, just pick the first one
                 $rule = $matching_rules[0]
             }
@@ -201,7 +201,7 @@ Function Enable-GlobalHttpFirewallAccess {
     }
 
     If (-not $rule) {
-        Write-Verbose "Creating a new HTTP  rule"
+        Write-Verbose "Creating a new HTTP firewall  rule"
         $rule = New-Object -ComObject HNetCfg.FWRule
         $rule.Name = "Windows Remote Management (HTTP-In)"
         $rule.Description = "Inbound rule for Windows Remote Management via WS-Management. [TCP 5985]"
@@ -223,7 +223,7 @@ Function Enable-GlobalHttpFirewallAccess {
         $fw.Rules.Add($rule)
     }
 
-    Write-Verbose "HTTP  rule $($rule.Name) updated"
+    Write-Verbose "HTTP firewall  rule $($rule.Name) updated"
 }
 
 # Setup error handling.
