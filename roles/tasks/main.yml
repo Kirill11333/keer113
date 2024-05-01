@@ -1,0 +1,4 @@
+---
+- name: manage windows users
+  include_tasks: manage_windows_users.yml
+  loop: "{{ users }}"

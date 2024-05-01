@@ -1,0 +1,19 @@
+--- 
+- name: included block
+  block:
+    - name: Check if {{ item.name }} exists
+      ansible.windows.win_user:
+        name: "{{ item.name }}"
+        state: query
+      register: user_check
+
+    - name: Manage user {{ item.name }}  
+      ansible.windows.win_user:
+        name: "{{ item.name }}"
+        password: "{{ user_password }}"
+        state: "{{ item.state }}"
+        groups:
+          - Administrators
+        password_expired: yes
+        update_password: on_create
+      when: user_check.state != item.state 
